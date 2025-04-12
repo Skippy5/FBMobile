@@ -363,24 +363,17 @@ class Game {
     }
     
     setupMobileControls() {
-        // Direction buttons
-        const btnUp = document.getElementById('btn-up');
-        const btnDown = document.getElementById('btn-down');
-        const btnLeft = document.getElementById('btn-left');
-        const btnRight = document.getElementById('btn-right');
-        
-        // Diagonal buttons
-        const btnUpLeft = document.getElementById('btn-up-left');
-        const btnUpRight = document.getElementById('btn-up-right');
-        const btnDownLeft = document.getElementById('btn-down-left');
-        const btnDownRight = document.getElementById('btn-down-right');
+        // Get joystick elements
+        const joystickContainer = document.getElementById('joystick-container');
+        const joystickBase = document.getElementById('joystick-base');
+        const joystickThumb = document.getElementById('joystick-thumb');
         
         // Action button
         const btnAction = document.getElementById('btn-action');
         
         // Improve touch handling - prevent context menus
         document.addEventListener('contextmenu', function(e) {
-            if (e.target.tagName === 'BUTTON') {
+            if (e.target.className.includes('joystick') || e.target.id === 'btn-action') {
                 e.preventDefault();
                 return false;
             }
@@ -388,127 +381,205 @@ class Game {
         
         // Prevent scrolling/zooming on touch
         document.addEventListener('touchmove', function(e) {
-            if (e.target.tagName === 'BUTTON' || e.target.tagName === 'CANVAS') {
+            if (e.target.className.includes('joystick') || e.target.id === 'btn-action' || e.target.tagName === 'CANVAS') {
                 e.preventDefault();
             }
         }, { passive: false });
         
-        // Better touch handling for both touchscreen and mouse
-        const handleButtonTouch = (button, startAction, endAction) => {
-            let isActive = false;
-            
-            // Handle touch events
-            button.addEventListener('touchstart', (e) => {
-                e.preventDefault();
-                isActive = true;
-                button.classList.add('active');
-                startAction();
-            }, { passive: false });
-            
-            button.addEventListener('touchend', (e) => {
-                e.preventDefault();
-                isActive = false;
-                button.classList.remove('active');
-                endAction();
-            }, { passive: false });
-            
-            button.addEventListener('touchcancel', (e) => {
-                e.preventDefault();
-                isActive = false;
-                button.classList.remove('active');
-                endAction();
-            }, { passive: false });
-            
-            // Also support mouse events for testing
-            button.addEventListener('mousedown', (e) => {
-                isActive = true;
-                button.classList.add('active');
-                startAction();
-            });
-            
-            button.addEventListener('mouseup', () => {
-                isActive = false;
-                button.classList.remove('active');
-                endAction();
-            });
-            
-            button.addEventListener('mouseleave', () => {
-                if (isActive) {
-                    isActive = false;
-                    button.classList.remove('active');
-                    endAction();
-                }
-            });
+        // Joystick variables
+        let joystickActive = false;
+        let joystickStartPos = { x: 0, y: 0 };
+        let joystickCurrentPos = { x: 0, y: 0 };
+        const joystickMaxDistance = 40; // Maximum distance the thumb can move from center
+        
+        // Initialize joystick state
+        const resetJoystick = () => {
+            this.rj.isMovingUp = false;
+            this.rj.isMovingDown = false;
+            this.rj.isMovingLeft = false;
+            this.rj.isMovingRight = false;
+            joystickThumb.style.top = '50%';
+            joystickThumb.style.left = '50%';
+            joystickThumb.classList.remove('active');
         };
         
-        // Set up directional buttons
-        handleButtonTouch(
-            btnUp, 
-            () => { this.rj.isMovingUp = true; }, 
-            () => { this.rj.isMovingUp = false; }
-        );
+        // Handle joystick touch start
+        const handleJoystickStart = (e) => {
+            e.preventDefault();
+            joystickActive = true;
+            joystickThumb.classList.add('active');
+            
+            // Get the position relative to the joystick base
+            const rect = joystickBase.getBoundingClientRect();
+            joystickStartPos = {
+                x: rect.left + rect.width / 2,
+                y: rect.top + rect.height / 2
+            };
+            
+            // If this is a touch event, use the first touch point
+            if (e.type === 'touchstart') {
+                joystickCurrentPos = {
+                    x: e.touches[0].clientX,
+                    y: e.touches[0].clientY
+                };
+            } else {
+                joystickCurrentPos = {
+                    x: e.clientX,
+                    y: e.clientY
+                };
+            }
+            
+            // Move the thumb immediately
+            updateJoystickPosition(e);
+        };
         
-        handleButtonTouch(
-            btnDown, 
-            () => { this.rj.isMovingDown = true; }, 
-            () => { this.rj.isMovingDown = false; }
-        );
+        // Handle joystick movement
+        const updateJoystickPosition = (e) => {
+            if (!joystickActive) return;
+            
+            // Update position with current touch/mouse point
+            if (e.type === 'touchmove') {
+                joystickCurrentPos = {
+                    x: e.touches[0].clientX,
+                    y: e.touches[0].clientY
+                };
+            } else if (e.type === 'mousemove') {
+                joystickCurrentPos = {
+                    x: e.clientX,
+                    y: e.clientY
+                };
+            }
+            
+            // Calculate the delta from center
+            const deltaX = joystickCurrentPos.x - joystickStartPos.x;
+            const deltaY = joystickCurrentPos.y - joystickStartPos.y;
+            
+            // Calculate angle and distance
+            const distance = Math.min(Math.sqrt(deltaX * deltaX + deltaY * deltaY), joystickMaxDistance);
+            const angle = Math.atan2(deltaY, deltaX);
+            
+            // Convert to new position within constraints (circular boundary)
+            const thumbX = Math.cos(angle) * distance;
+            const thumbY = Math.sin(angle) * distance;
+            
+            // Update thumb position
+            joystickThumb.style.transform = `translate(calc(-50% + ${thumbX}px), calc(-50% + ${thumbY}px))`;
+            
+            // Determine movement direction based on joystick position
+            // We'll use 8-way directional movement with cardinal and diagonal directions
+            const deadzone = 10; // Minimum distance to trigger movement
+            
+            // Reset all directions
+            this.rj.isMovingUp = false;
+            this.rj.isMovingDown = false;
+            this.rj.isMovingLeft = false;
+            this.rj.isMovingRight = false;
+            
+            if (distance > deadzone) {
+                // Determine the primary direction based on the angle
+                // Right
+                if (angle > -Math.PI/8 && angle < Math.PI/8) {
+                    this.rj.isMovingRight = true;
+                }
+                // Down-right
+                else if (angle >= Math.PI/8 && angle < 3*Math.PI/8) {
+                    this.rj.isMovingRight = true;
+                    this.rj.isMovingDown = true;
+                }
+                // Down
+                else if (angle >= 3*Math.PI/8 && angle < 5*Math.PI/8) {
+                    this.rj.isMovingDown = true;
+                }
+                // Down-left
+                else if (angle >= 5*Math.PI/8 && angle < 7*Math.PI/8) {
+                    this.rj.isMovingDown = true;
+                    this.rj.isMovingLeft = true;
+                }
+                // Left
+                else if (angle >= 7*Math.PI/8 || angle < -7*Math.PI/8) {
+                    this.rj.isMovingLeft = true;
+                }
+                // Up-left
+                else if (angle >= -7*Math.PI/8 && angle < -5*Math.PI/8) {
+                    this.rj.isMovingUp = true;
+                    this.rj.isMovingLeft = true;
+                }
+                // Up
+                else if (angle >= -5*Math.PI/8 && angle < -3*Math.PI/8) {
+                    this.rj.isMovingUp = true;
+                }
+                // Up-right
+                else if (angle >= -3*Math.PI/8 && angle < -Math.PI/8) {
+                    this.rj.isMovingUp = true;
+                    this.rj.isMovingRight = true;
+                }
+                
+                // Also adjust movement speed based on joystick distance
+                const speedFactor = distance / joystickMaxDistance;
+                this.rj.movementSpeed = this.rj.speed * speedFactor;
+            } else {
+                // Inside deadzone, no movement
+                this.rj.movementSpeed = this.rj.speed;
+            }
+        };
         
-        handleButtonTouch(
-            btnLeft, 
-            () => { this.rj.isMovingLeft = true; }, 
-            () => { this.rj.isMovingLeft = false; }
-        );
+        // Handle joystick release
+        const handleJoystickEnd = (e) => {
+            e.preventDefault();
+            joystickActive = false;
+            resetJoystick();
+        };
         
-        handleButtonTouch(
-            btnRight, 
-            () => { this.rj.isMovingRight = true; }, 
-            () => { this.rj.isMovingRight = false; }
-        );
+        // Add joystick event listeners
+        joystickBase.addEventListener('touchstart', handleJoystickStart, { passive: false });
+        joystickBase.addEventListener('mousedown', handleJoystickStart, { passive: false });
         
-        // Set up diagonal buttons
-        handleButtonTouch(
-            btnUpLeft, 
-            () => { this.rj.isMovingUp = true; this.rj.isMovingLeft = true; }, 
-            () => { this.rj.isMovingUp = false; this.rj.isMovingLeft = false; }
-        );
+        document.addEventListener('touchmove', updateJoystickPosition, { passive: false });
+        document.addEventListener('mousemove', updateJoystickPosition, { passive: false });
         
-        handleButtonTouch(
-            btnUpRight, 
-            () => { this.rj.isMovingUp = true; this.rj.isMovingRight = true; }, 
-            () => { this.rj.isMovingUp = false; this.rj.isMovingRight = false; }
-        );
+        document.addEventListener('touchend', handleJoystickEnd, { passive: false });
+        document.addEventListener('mouseup', handleJoystickEnd, { passive: false });
         
-        handleButtonTouch(
-            btnDownLeft, 
-            () => { this.rj.isMovingDown = true; this.rj.isMovingLeft = true; }, 
-            () => { this.rj.isMovingDown = false; this.rj.isMovingLeft = false; }
-        );
-        
-        handleButtonTouch(
-            btnDownRight, 
-            () => { this.rj.isMovingDown = true; this.rj.isMovingRight = true; }, 
-            () => { this.rj.isMovingDown = false; this.rj.isMovingRight = false; }
-        );
-        
-        // Set up action button with double-tap for token
+        // Better touch handling for both touchscreen and mouse for the action button
+        let actionBtnActive = false;
         let lastTap = 0;
         
-        handleButtonTouch(
-            btnAction, 
-            () => { 
-                this.rj.interacting = true; 
-                
-                // Handle double tap for token
-                const currentTime = new Date().getTime();
-                const tapLength = currentTime - lastTap;
-                if (tapLength < 500 && tapLength > 0) {
-                    this.useToken();
-                }
-                lastTap = currentTime;
-            }, 
-            () => { this.rj.interacting = false; }
-        );
+        btnAction.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            actionBtnActive = true;
+            btnAction.classList.add('active');
+            this.rj.interacting = true;
+            
+            // Handle double tap for token
+            const currentTime = new Date().getTime();
+            const tapLength = currentTime - lastTap;
+            if (tapLength < 500 && tapLength > 0) {
+                this.useToken();
+            }
+            lastTap = currentTime;
+        }, { passive: false });
+        
+        btnAction.addEventListener('mousedown', (e) => {
+            actionBtnActive = true;
+            btnAction.classList.add('active');
+            this.rj.interacting = true;
+        });
+        
+        const endActionButton = (e) => {
+            if (e.type === 'touchend' || e.type === 'touchcancel') {
+                e.preventDefault();
+            }
+            if (actionBtnActive) {
+                actionBtnActive = false;
+                btnAction.classList.remove('active');
+                this.rj.interacting = false;
+            }
+        };
+        
+        btnAction.addEventListener('touchend', endActionButton, { passive: false });
+        btnAction.addEventListener('touchcancel', endActionButton, { passive: false });
+        btnAction.addEventListener('mouseup', endActionButton);
+        btnAction.addEventListener('mouseleave', endActionButton);
         
         // Also handle direct canvas touch for game actions
         this.canvas.addEventListener('touchstart', (e) => {
@@ -919,43 +990,82 @@ class Game {
     }
     
     updateRJ(deltaTime) {
-        // Move RJ based on key inputs - apply speed boost if active
-        const currentSpeed = this.rj.speedBoost ? this.rj.speed * 1.5 : this.rj.speed;
+        // Skip update if game is not running
+        if (!this.isRunning) return;
         
-        if (this.rj.isMovingUp) this.rj.y -= currentSpeed * deltaTime;
-        if (this.rj.isMovingDown) this.rj.y += currentSpeed * deltaTime;
-        if (this.rj.isMovingLeft) this.rj.x -= currentSpeed * deltaTime;
-        if (this.rj.isMovingRight) this.rj.x += currentSpeed * deltaTime;
+        // Store the old position
+        const oldX = this.rj.x;
+        const oldY = this.rj.y;
         
-        // Keep RJ within canvas bounds
-        this.rj.x = Math.max(this.rj.width / 2, Math.min(this.canvas.width - this.rj.width / 2, this.rj.x));
-        this.rj.y = Math.max(this.rj.height / 2, Math.min(this.canvas.height - this.rj.height / 2, this.rj.y));
+        // Default to full speed if movementSpeed is not set (for keyboard controls)
+        const currentSpeed = this.rj.movementSpeed || this.rj.speed;
         
-        // Handle interaction with people - now with improved range
-        if (this.rj.interacting) {
-            // Check all people within interaction range
-            for (const person of this.people) {
-                const dx = person.x - this.rj.x;
-                const dy = person.y - this.rj.y;
-                const distance = Math.sqrt(dx * dx + dy * dy);
-                
-                // If within interaction range
-                if (distance <= this.rj.interactionRange) {
-                    // Increase CSAT score gradually - INCREASED RATE BY 3X
-                    if (person.score < 7) {
-                        person.satisfaction += deltaTime * 2.1; // Increased from 0.7 to 2.1
-                        if (person.satisfaction >= 1) {
-                            person.score = Math.min(7, person.score + 1);
-                            person.satisfaction = 0;
-                        }
-                        
-                        // Draw interaction aura
-                        this.ctx.beginPath();
-                        this.ctx.arc(this.rj.x, this.rj.y, this.rj.interactionRange, 0, Math.PI * 2);
-                        this.ctx.fillStyle = 'rgba(46, 204, 113, 0.2)';
-                        this.ctx.fill();
+        // Apply speed boost if active
+        let speed = this.rj.speedBoost ? currentSpeed * 1.5 : currentSpeed;
+        
+        // Calculate movement
+        let dx = 0;
+        let dy = 0;
+        
+        if (this.rj.isMovingUp) dy -= speed * deltaTime;
+        if (this.rj.isMovingDown) dy += speed * deltaTime;
+        if (this.rj.isMovingLeft) dx -= speed * deltaTime;
+        if (this.rj.isMovingRight) dx += speed * deltaTime;
+        
+        // Normalize diagonal movement
+        if (dx !== 0 && dy !== 0) {
+            const factor = 1 / Math.sqrt(2);
+            dx *= factor;
+            dy *= factor;
+        }
+        
+        // Update position
+        this.rj.x += dx;
+        this.rj.y += dy;
+        
+        // Keep within bounds
+        this.rj.x = Math.max(this.rj.width / 2, Math.min(this.rj.x, this.canvasWidth - this.rj.width / 2));
+        this.rj.y = Math.max(this.rj.height / 2, Math.min(this.rj.y, this.canvasHeight - this.rj.height / 2));
+        
+        // Handle interactions
+        if (this.rj.interacting && !this.rj.targetPerson) {
+            // Look for nearby people to interact with
+            this.people.forEach(person => {
+                if (!person.interacting) {
+                    const dx = this.rj.x - person.x;
+                    const dy = this.rj.y - person.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    
+                    if (distance < this.rj.interactionRange) {
+                        // Start interaction
+                        this.rj.targetPerson = person;
+                        person.interacting = true;
+                        person.interactionTime = 0;
+                        person.interactionComplete = false;
                     }
                 }
+            });
+        }
+        
+        // Update interaction with target person
+        if (this.rj.targetPerson) {
+            // Check if target person is still close enough
+            const dx = this.rj.x - this.rj.targetPerson.x;
+            const dy = this.rj.y - this.rj.targetPerson.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            if (distance > this.rj.interactionRange || !this.rj.interacting) {
+                // End interaction if too far or interaction button released
+                this.rj.targetPerson.interacting = false;
+                this.rj.targetPerson = null;
+            }
+        }
+        
+        // Update speed boost
+        if (this.rj.speedBoost) {
+            this.rj.speedBoostDuration -= deltaTime;
+            if (this.rj.speedBoostDuration <= 0) {
+                this.rj.speedBoost = false;
             }
         }
     }

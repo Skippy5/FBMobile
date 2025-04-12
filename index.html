@@ -40,18 +40,12 @@
             <div id="buff-indicator" class="buff-indicator">Positive Feedback Buff: 0s</div>
             <canvas id="gameCanvas"></canvas>
             
-            <!-- Mobile Controls -->
+            <!-- Mobile Controls - Joystick -->
             <div class="mobile-controls">
-                <div class="d-pad">
-                    <button id="btn-up-left" class="btn-diagonal">↖</button>
-                    <button id="btn-up" class="btn-direction">↑</button>
-                    <button id="btn-up-right" class="btn-diagonal">↗</button>
-                    <button id="btn-left" class="btn-direction">←</button>
-                    <button id="btn-center" class="btn-direction"></button>
-                    <button id="btn-right" class="btn-direction">→</button>
-                    <button id="btn-down-left" class="btn-diagonal">↙</button>
-                    <button id="btn-down" class="btn-direction">↓</button>
-                    <button id="btn-down-right" class="btn-diagonal">↘</button>
+                <div id="joystick-container" class="joystick-container">
+                    <div id="joystick-base" class="joystick-base">
+                        <div id="joystick-thumb" class="joystick-thumb"></div>
+                    </div>
                 </div>
             </div>
             <button id="btn-action" class="action-button">Interact</button>

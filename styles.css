@@ -156,53 +156,62 @@ canvas {
 /* Mobile touch controls */
 .mobile-controls {
     position: absolute;
-    bottom: 10px;
-    left: 10px;
+    bottom: 20px;
+    left: 20px;
     z-index: 100;
-    width: auto;
     pointer-events: none;
     display: block;
 }
 
-.d-pad {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    grid-template-rows: repeat(3, 1fr);
-    gap: 3px;
+/* Joystick styles */
+.joystick-container {
+    width: 120px;
+    height: 120px;
+    position: relative;
     pointer-events: all;
 }
 
-.d-pad button {
-    width: 40px;
-    height: 40px;
-    background-color: rgba(74, 105, 189, 0.7);
-    border: none;
+.joystick-base {
+    width: 120px;
+    height: 120px;
     border-radius: 50%;
-    color: white;
-    font-size: 18px;
+    background-color: rgba(74, 105, 189, 0.3);
+    border: 2px solid rgba(74, 105, 189, 0.7);
+    position: absolute;
     display: flex;
     justify-content: center;
     align-items: center;
-    touch-action: manipulation;
-    -webkit-tap-highlight-color: transparent;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
 }
 
-.d-pad button:active, .d-pad button.active {
+.joystick-thumb {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background-color: rgba(74, 105, 189, 0.8);
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    box-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
+    transition: background-color 0.1s;
+}
+
+.joystick-thumb.active {
     background-color: rgba(74, 105, 189, 1);
-    transform: scale(0.95);
 }
 
 .action-button {
     position: absolute;
-    right: 10px;
-    bottom: 20px;
-    width: 60px;
-    height: 60px;
+    right: 30px;
+    bottom: 30px;
+    width: 80px;
+    height: 80px;
     background-color: rgba(29, 209, 161, 0.7);
     border: none;
     border-radius: 50%;
     color: white;
-    font-size: 14px;
+    font-size: 16px;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -210,6 +219,7 @@ canvas {
     pointer-events: all;
     z-index: 100;
     -webkit-tap-highlight-color: transparent;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
 }
 
 .action-button:active, .action-button.active {
