@@ -25,12 +25,17 @@ class Game {
             color: '#e74c3c' // Red color by default
         };
         
-        // Ensure the canvas initially takes up the maximum available space
-        this.canvasWidth = window.innerWidth;
-        this.canvasHeight = window.innerHeight - document.querySelector('.header').offsetHeight;
+        // Set up initial canvas size - will be properly resized later
+        const gameArea = document.querySelector('.game-area');
+        // Use fallback values if gameArea isn't available yet
+        this.canvasWidth = gameArea ? gameArea.clientWidth : window.innerWidth;
+        this.canvasHeight = gameArea ? gameArea.clientHeight : window.innerHeight - 60;
+        
+        // Store initial dimensions for scaling purposes
         this.previousWidth = this.canvasWidth;
         this.previousHeight = this.canvasHeight;
         
+        // Game state variables
         this.isRunning = false;
         this.level = 1;
         this.score = 0;
@@ -48,9 +53,32 @@ class Game {
         this.moodAdjustment = 0; // Track mood adjustment between levels
         this.moodMessage = ""; // Message to display with mood adjustment
         
+        // Initialize game objects with sensible defaults
+        this.initializeGameObjects();
+        
+        // Bind events to handle keyboard and touch controls
+        this.bindEvents();
+        
+        // Handle initial resize
+        this.resize();
+        
+        // Render splash screen
+        this.renderSplashScreen();
+        
+        // Detect if running on mobile
+        this.isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        
+        // Mobile optimization
+        if (this.isMobile) {
+            // Reduce visual effects or complexity for mobile
+            this.reduceMobileEffects();
+        }
+    }
+    
+    initializeGameObjects() {
         this.rj = {
-            x: 400,
-            y: 300,
+            x: this.canvasWidth / 2,
+            y: this.canvasHeight / 2,
             width: 30,
             height: 30,
             speed: 200,
@@ -60,17 +88,17 @@ class Game {
             isMovingRight: false,
             interacting: false,
             targetPerson: null,
-            interactionRange: 50, // Range for interacting with people
-            speedBoost: false, // Whether speed boost is active
-            speedBoostDuration: 0, // Duration of speed boost
-            messageTimer: 0, // Timer for displaying the message
-            messageVisible: false, // Whether the message is visible
-            messageText: null // Custom message text
+            interactionRange: 50,
+            speedBoost: false,
+            speedBoostDuration: 0,
+            messageTimer: 0,
+            messageVisible: false,
+            messageText: null
         };
         
         this.chappy = {
-            x: 400,
-            y: 200,
+            x: this.canvasWidth / 2,
+            y: this.canvasHeight / 3,
             width: 30,
             height: 30,
             speed: 100,
@@ -85,26 +113,26 @@ class Game {
             messageVisible: false,
             messageTimer: 0,
             messageText: null,
-            lastCollisionTime: 0, // Track last collision time to prevent rapid mood loss
-            handlingBear: false,  // New property to track when Chappy is handling a bear
-            handlingBearTime: 0,   // Timer for bear handling animation
-            disguised: false,     // Whether Chappy is disguised as "Not Chappy"
-            leaving: false,       // Whether Chappy is currently leaving the screen
-            returning: false,     // Whether Chappy is currently returning to the screen
-            leaveTimer: 0,        // Timer for when Chappy should leave
-            originalX: 0,         // Original X position before leaving
-            originalY: 0,          // Original Y position before leaving
-            bearCollision: false  // New flag to indicate if returning from bear collision
+            lastCollisionTime: 0,
+            handlingBear: false,
+            handlingBearTime: 0,
+            disguised: false,
+            leaving: false,
+            returning: false,
+            leaveTimer: 0,
+            originalX: 0,
+            originalY: 0,
+            bearCollision: false
         };
         
         this.skip = {
-            x: 400,
-            y: 550,
+            x: this.canvasWidth / 2,
+            y: this.canvasHeight - 50,
             width: 40,
             height: 40,
-            messageTimer: 0, // Timer for displaying the message
-            messageVisible: false, // Whether the message is visible
-            messageText: null // Custom message text
+            messageTimer: 0,
+            messageVisible: false,
+            messageText: null
         };
         
         // Dean - new NPC character
@@ -131,51 +159,9 @@ class Game {
         this.activeNPC = null;
         this.collectedNPC = null; // Store the last collected NPC
         this.npcSpawnTimer = 5 + Math.random() * 5; // Reduced timer: 5-10 seconds instead of 15-30
-        this.npcTypes = {
-            'sj': {
-                name: 'SJ',
-                color: '#8e44ad', // Purple color for SJ
-                message: "Products Enhancements!",
-                effect: 'positive_feedback_buff',
-                effectDuration: 15 // 15 seconds of buff
-            },
-            'ali': {
-                name: 'Ali',
-                color: '#2ecc71', // Green color for Ali
-                message: "*Ping* *Ping*\nAll Systems good\n*Ping* *Ping*\ngotta go\n*Ping* *Ping*",
-                effect: 'chappy_slowdown',
-                effectDuration: 10 // 10 seconds of slowdown
-            },
-            'ted': {
-                name: 'Ted',
-                color: '#e74c3c', // Red color for Ted
-                message: "We can't fix this without a change ticket!",
-                effect: 'feedback_score_boost',
-                effectDuration: 0 // Instant effect
-            },
-            'gabor': {
-                name: 'Gabor',
-                color: '#3498db', // Blue color for Gabor
-                message: "New Computers for everyone!",
-                effect: 'make_people_happy',
-                effectDuration: 10 // 10 seconds of happiness
-            },
-            'jt': {
-                name: 'JT',
-                color: '#f39c12', // Orange color for JT
-                message: "Happy Birthday Dean!",
-                effect: 'spawn_birthday_dean',
-                effectDuration: 0 // Instant effect
-            },
-            'cole': {
-                name: 'Cole',
-                color: '#16a085', // Teal color for Cole
-                message: "Let's get this place organized!",
-                effect: 'organize_respondents',
-                effectDuration: 0 // Instant effect
-            }
-            // More NPCs can be added here in the future
-        };
+        
+        // Initialize NPC types with their effects
+        this.initializeNPCTypes();
         
         this.people = [];
         this.envelopes = [];
@@ -184,14 +170,6 @@ class Game {
         
         this.peopleCount = 10; // Number of people per level
         this.peopleLeft = this.peopleCount;
-        
-        // Call resize to set up the proper dimensions
-        this.resize();
-        
-        // Bind events after initialization
-        this.bindEvents();
-        // Render splash screen
-        this.renderSplashScreen();
         
         // Positive feedback buff status
         this.positiveFeedbackBuff = false;
@@ -236,10 +214,72 @@ class Game {
             active: false,
             spawnTimer: 0,
             activeTimer: 0,
-            minSpawnTime: 45, // Increased from 20 to 45 seconds
-            maxSpawnTime: 90, // Increased from 40 to 90 seconds
+            minSpawnTime: 45, // Seconds
+            maxSpawnTime: 90, // Seconds
             activeDuration: 15 // How long the bear stays on screen
         };
+    }
+    
+    initializeNPCTypes() {
+        this.npcTypes = {
+            'sj': {
+                name: 'SJ',
+                color: '#8e44ad', // Purple color for SJ
+                message: "Products Enhancements!",
+                effect: 'positive_feedback_buff',
+                effectDuration: 15 // 15 seconds of buff
+            },
+            'ali': {
+                name: 'Ali',
+                color: '#2ecc71', // Green color for Ali
+                message: "*Ping* *Ping*\nAll Systems good\n*Ping* *Ping*\ngotta go\n*Ping* *Ping*",
+                effect: 'chappy_slowdown',
+                effectDuration: 10 // 10 seconds of slowdown
+            },
+            'ted': {
+                name: 'Ted',
+                color: '#e74c3c', // Red color for Ted
+                message: "We can't fix this without a change ticket!",
+                effect: 'feedback_score_boost',
+                effectDuration: 0 // Instant effect
+            },
+            'gabor': {
+                name: 'Gabor',
+                color: '#3498db', // Blue color for Gabor
+                message: "New Computers for everyone!",
+                effect: 'make_people_happy',
+                effectDuration: 10 // 10 seconds of happiness
+            },
+            'jt': {
+                name: 'JT',
+                color: '#f39c12', // Orange color for JT
+                message: "Happy Birthday Dean!",
+                effect: 'spawn_birthday_dean',
+                effectDuration: 0 // Instant effect
+            },
+            'cole': {
+                name: 'Cole',
+                color: '#16a085', // Teal color for Cole
+                message: "Let's get this place organized!",
+                effect: 'organize_respondents',
+                effectDuration: 0 // Instant effect
+            }
+        };
+    }
+    
+    reduceMobileEffects() {
+        // Simplify visual effects for better mobile performance
+        // Reduce spawn rates
+        this.npcSpawnTimer = 10 + Math.random() * 10;
+        this.bear.minSpawnTime = 60;
+        this.bear.maxSpawnTime = 120;
+        
+        // Simplify some mechanics
+        this.rj.speed = 180; // Slightly lower speed for better control
+        this.chappy.speed = 90;
+        
+        // Adjust interaction ranges for easier mobile gameplay
+        this.rj.interactionRange = 60; // Larger interaction range
     }
     
     bindEvents() {
@@ -338,160 +378,203 @@ class Game {
         // Action button
         const btnAction = document.getElementById('btn-action');
         
-        // Helper function to handle touch events
-        const handleTouchStart = (button, action) => {
+        // Improve touch handling - prevent context menus
+        document.addEventListener('contextmenu', function(e) {
+            if (e.target.tagName === 'BUTTON') {
+                e.preventDefault();
+                return false;
+            }
+        });
+        
+        // Prevent scrolling/zooming on touch
+        document.addEventListener('touchmove', function(e) {
+            if (e.target.tagName === 'BUTTON' || e.target.tagName === 'CANVAS') {
+                e.preventDefault();
+            }
+        }, { passive: false });
+        
+        // Better touch handling for both touchscreen and mouse
+        const handleButtonTouch = (button, startAction, endAction) => {
+            let isActive = false;
+            
+            // Handle touch events
             button.addEventListener('touchstart', (e) => {
                 e.preventDefault();
-                action(true);
-            });
+                isActive = true;
+                button.classList.add('active');
+                startAction();
+            }, { passive: false });
             
-            button.addEventListener('mousedown', () => {
-                action(true);
-            });
-        };
-        
-        const handleTouchEnd = (button, action) => {
             button.addEventListener('touchend', (e) => {
                 e.preventDefault();
-                action(false);
-            });
+                isActive = false;
+                button.classList.remove('active');
+                endAction();
+            }, { passive: false });
             
             button.addEventListener('touchcancel', (e) => {
                 e.preventDefault();
-                action(false);
+                isActive = false;
+                button.classList.remove('active');
+                endAction();
+            }, { passive: false });
+            
+            // Also support mouse events for testing
+            button.addEventListener('mousedown', (e) => {
+                isActive = true;
+                button.classList.add('active');
+                startAction();
             });
             
             button.addEventListener('mouseup', () => {
-                action(false);
+                isActive = false;
+                button.classList.remove('active');
+                endAction();
             });
             
-            // Handle cases where touch moves outside the button
             button.addEventListener('mouseleave', () => {
-                action(false);
+                if (isActive) {
+                    isActive = false;
+                    button.classList.remove('active');
+                    endAction();
+                }
             });
         };
         
         // Set up directional buttons
-        handleTouchStart(btnUp, (active) => this.rj.isMovingUp = active);
-        handleTouchEnd(btnUp, (active) => this.rj.isMovingUp = active);
+        handleButtonTouch(
+            btnUp, 
+            () => { this.rj.isMovingUp = true; }, 
+            () => { this.rj.isMovingUp = false; }
+        );
         
-        handleTouchStart(btnDown, (active) => this.rj.isMovingDown = active);
-        handleTouchEnd(btnDown, (active) => this.rj.isMovingDown = active);
+        handleButtonTouch(
+            btnDown, 
+            () => { this.rj.isMovingDown = true; }, 
+            () => { this.rj.isMovingDown = false; }
+        );
         
-        handleTouchStart(btnLeft, (active) => this.rj.isMovingLeft = active);
-        handleTouchEnd(btnLeft, (active) => this.rj.isMovingLeft = active);
+        handleButtonTouch(
+            btnLeft, 
+            () => { this.rj.isMovingLeft = true; }, 
+            () => { this.rj.isMovingLeft = false; }
+        );
         
-        handleTouchStart(btnRight, (active) => this.rj.isMovingRight = active);
-        handleTouchEnd(btnRight, (active) => this.rj.isMovingRight = active);
+        handleButtonTouch(
+            btnRight, 
+            () => { this.rj.isMovingRight = true; }, 
+            () => { this.rj.isMovingRight = false; }
+        );
         
         // Set up diagonal buttons
-        handleTouchStart(btnUpLeft, (active) => {
-            this.rj.isMovingUp = active;
-            this.rj.isMovingLeft = active;
-        });
-        handleTouchEnd(btnUpLeft, (active) => {
-            this.rj.isMovingUp = active;
-            this.rj.isMovingLeft = active;
-        });
+        handleButtonTouch(
+            btnUpLeft, 
+            () => { this.rj.isMovingUp = true; this.rj.isMovingLeft = true; }, 
+            () => { this.rj.isMovingUp = false; this.rj.isMovingLeft = false; }
+        );
         
-        handleTouchStart(btnUpRight, (active) => {
-            this.rj.isMovingUp = active;
-            this.rj.isMovingRight = active;
-        });
-        handleTouchEnd(btnUpRight, (active) => {
-            this.rj.isMovingUp = active;
-            this.rj.isMovingRight = active;
-        });
+        handleButtonTouch(
+            btnUpRight, 
+            () => { this.rj.isMovingUp = true; this.rj.isMovingRight = true; }, 
+            () => { this.rj.isMovingUp = false; this.rj.isMovingRight = false; }
+        );
         
-        handleTouchStart(btnDownLeft, (active) => {
-            this.rj.isMovingDown = active;
-            this.rj.isMovingLeft = active;
-        });
-        handleTouchEnd(btnDownLeft, (active) => {
-            this.rj.isMovingDown = active;
-            this.rj.isMovingLeft = active;
-        });
+        handleButtonTouch(
+            btnDownLeft, 
+            () => { this.rj.isMovingDown = true; this.rj.isMovingLeft = true; }, 
+            () => { this.rj.isMovingDown = false; this.rj.isMovingLeft = false; }
+        );
         
-        handleTouchStart(btnDownRight, (active) => {
-            this.rj.isMovingDown = active;
-            this.rj.isMovingRight = active;
-        });
-        handleTouchEnd(btnDownRight, (active) => {
-            this.rj.isMovingDown = active;
-            this.rj.isMovingRight = active;
-        });
+        handleButtonTouch(
+            btnDownRight, 
+            () => { this.rj.isMovingDown = true; this.rj.isMovingRight = true; }, 
+            () => { this.rj.isMovingDown = false; this.rj.isMovingRight = false; }
+        );
         
-        // Set up action button
-        handleTouchStart(btnAction, (active) => this.rj.interacting = active);
-        handleTouchEnd(btnAction, (active) => this.rj.interacting = active);
-        
-        // Double tap on action button to use token
+        // Set up action button with double-tap for token
         let lastTap = 0;
-        btnAction.addEventListener('touchstart', (e) => {
-            const currentTime = new Date().getTime();
-            const tapLength = currentTime - lastTap;
-            if (tapLength < 500 && tapLength > 0) {
-                e.preventDefault();
-                this.useToken();
+        
+        handleButtonTouch(
+            btnAction, 
+            () => { 
+                this.rj.interacting = true; 
+                
+                // Handle double tap for token
+                const currentTime = new Date().getTime();
+                const tapLength = currentTime - lastTap;
+                if (tapLength < 500 && tapLength > 0) {
+                    this.useToken();
+                }
+                lastTap = currentTime;
+            }, 
+            () => { this.rj.interacting = false; }
+        );
+        
+        // Also handle direct canvas touch for game actions
+        this.canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            
+            // Handle touch for splash screen
+            if (this.showSplashScreen) {
+                this.showSplashScreen = false;
+                this.start();
+                return;
             }
-            lastTap = currentTime;
-        });
+            
+            // Handle touch for game over screen
+            if (this.showGameOverScreen) {
+                const rect = this.canvas.getBoundingClientRect();
+                const x = e.touches[0].clientX - rect.left;
+                const y = e.touches[0].clientY - rect.top;
+                
+                // Check if restart button was touched
+                if (x >= this.canvas.width / 2 - 75 && x <= this.canvas.width / 2 + 75 &&
+                    y >= this.canvas.height / 2 + 100 && y <= this.canvas.height / 2 + 150) {
+                    this.showGameOverScreen = false;
+                    this.start();
+                }
+            }
+            
+            // Handle touch for level splash screen
+            if (this.showLevelSplash) {
+                this.showLevelSplash = false;
+                this.levelSplashTimer = 0;
+            }
+        }, { passive: false });
     }
     
     resize() {
-        // Get container dimensions
-        const container = this.canvas.parentElement;
-        const headerHeight = document.querySelector('.header').offsetHeight;
-        const containerWidth = window.innerWidth;
-        const containerHeight = window.innerHeight - headerHeight;
+        // Get the game area element
+        const gameArea = document.querySelector('.game-area');
         
-        // Get device pixel ratio for better rendering on high-DPI screens
-        const dpr = window.devicePixelRatio || 1;
+        // Calculate available dimensions
+        const gameAreaWidth = gameArea.clientWidth;
+        const gameAreaHeight = gameArea.clientHeight;
         
-        // Calculate available height accounting for mobile controls
-        const isMobile = window.innerWidth <= 1024;
-        const controlsHeight = isMobile ? 80 : 0; // Approximate height for controls
-        
-        // Set canvas size to fill the available space
-        const canvasWidth = containerWidth;
-        const canvasHeight = containerHeight - controlsHeight;
-        
-        // Set canvas dimensions
-        this.canvas.width = canvasWidth;
-        this.canvas.height = canvasHeight;
+        // Set the canvas size to match the game area
+        this.canvas.width = gameAreaWidth;
+        this.canvas.height = gameAreaHeight;
         
         // Store canvas dimensions for game calculations
-        this.canvasWidth = canvasWidth;
-        this.canvasHeight = canvasHeight;
+        this.canvasWidth = gameAreaWidth;
+        this.canvasHeight = gameAreaHeight;
         
-        // Adjust positions of game elements based on new canvas size
+        // Scale game elements if needed
         if (this.isRunning) {
             // Keep previous canvas dimensions to scale properly
             const oldWidth = this.previousWidth || 1000;
-            const oldHeight = this.previousHeight || 800;
+            const oldHeight = this.previousHeight || 600;
             
-            const scaleX = canvasWidth / oldWidth;
-            const scaleY = canvasHeight / oldHeight;
+            const scaleX = gameAreaWidth / oldWidth;
+            const scaleY = gameAreaHeight / oldHeight;
             
-            // Reposition RJ
-            this.rj.x = Math.min(Math.max(this.rj.x * scaleX, this.rj.width), canvasWidth - this.rj.width);
-            this.rj.y = Math.min(Math.max(this.rj.y * scaleY, this.rj.height), canvasHeight - this.rj.height);
-            
-            // Reposition Chappy
-            this.chappy.x = Math.min(Math.max(this.chappy.x * scaleX, this.chappy.width), canvasWidth - this.chappy.width);
-            this.chappy.y = Math.min(Math.max(this.chappy.y * scaleY, this.chappy.height), canvasHeight - this.chappy.height);
-            
-            // Reposition Skip
-            this.skip.x = canvasWidth / 2;
-            this.skip.y = canvasHeight - 50;
-            
-            // Reposition all other game elements
-            this.repositionGameElements(scaleX, scaleY);
+            // Scale game elements
+            this.resizeGameElements(scaleX, scaleY);
         }
         
         // Store current dimensions for next resize
-        this.previousWidth = canvasWidth;
-        this.previousHeight = canvasHeight;
+        this.previousWidth = gameAreaWidth;
+        this.previousHeight = gameAreaHeight;
         
         // Re-render the current scene
         if (this.showSplashScreen) {
@@ -503,53 +586,35 @@ class Game {
         }
     }
     
-    repositionGameElements(scaleX, scaleY) {
+    resizeGameElements(scaleX, scaleY) {
+        // Reposition RJ
+        this.rj.x = Math.min(Math.max(this.rj.x * scaleX, this.rj.width), this.canvasWidth - this.rj.width);
+        this.rj.y = Math.min(Math.max(this.rj.y * scaleY, this.rj.height), this.canvasHeight - this.rj.height);
+        
+        // Reposition Chappy
+        this.chappy.x = Math.min(Math.max(this.chappy.x * scaleX, this.chappy.width), this.canvasWidth - this.chappy.width);
+        this.chappy.y = Math.min(Math.max(this.chappy.y * scaleY, this.chappy.height), this.canvasHeight - this.chappy.height);
+        
+        // Reposition Skip
+        this.skip.x = this.canvasWidth / 2;
+        this.skip.y = this.canvasHeight - 50;
+        
         // Helper function to keep objects within canvas bounds
         const keepInBounds = (obj) => {
             const radius = Math.max(obj.width, obj.height) / 2;
-            obj.x = Math.min(Math.max(obj.x, radius), this.canvasWidth - radius);
-            obj.y = Math.min(Math.max(obj.y, radius), this.canvasHeight - radius);
+            obj.x = Math.min(Math.max(obj.x * scaleX, radius), this.canvasWidth - radius);
+            obj.y = Math.min(Math.max(obj.y * scaleY, radius), this.canvasHeight - radius);
         };
         
-        // Reposition people
-        this.people.forEach(person => {
-            person.x *= scaleX;
-            person.y *= scaleY;
-            keepInBounds(person);
-        });
-        
-        // Reposition envelopes
-        this.envelopes.forEach(envelope => {
-            envelope.x *= scaleX;
-            envelope.y *= scaleY;
-            keepInBounds(envelope);
-        });
-        
-        // Reposition rewards
-        this.rewards.forEach(reward => {
-            reward.x *= scaleX;
-            reward.y *= scaleY;
-            keepInBounds(reward);
-        });
-        
-        // Reposition NPCs
-        this.npcs.forEach(npc => {
-            npc.x *= scaleX;
-            npc.y *= scaleY;
-            keepInBounds(npc);
-        });
-        
-        // Reposition powerups
-        this.powerups.forEach(powerup => {
-            powerup.x *= scaleX;
-            powerup.y *= scaleY;
-            keepInBounds(powerup);
-        });
+        // Reposition all game elements
+        this.people.forEach(person => keepInBounds(person));
+        this.envelopes.forEach(envelope => keepInBounds(envelope));
+        this.rewards.forEach(reward => keepInBounds(reward));
+        this.npcs.forEach(npc => keepInBounds(npc));
+        this.powerups.forEach(powerup => keepInBounds(powerup));
         
         // Reposition bear if active
         if (this.bear.active) {
-            this.bear.x *= scaleX;
-            this.bear.y *= scaleY;
             keepInBounds(this.bear);
         }
     }

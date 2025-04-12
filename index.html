@@ -35,24 +35,27 @@
                 </div>
             </div>
         </div>
-        <div id="buff-indicator" class="buff-indicator">Positive Feedback Buff: 0s</div>
-        <canvas id="gameCanvas"></canvas>
         
-        <!-- Mobile Controls -->
-        <div class="mobile-controls">
-            <div class="d-pad">
-                <button id="btn-up-left" class="btn-diagonal">↖</button>
-                <button id="btn-up" class="btn-direction">↑</button>
-                <button id="btn-up-right" class="btn-diagonal">↗</button>
-                <button id="btn-left" class="btn-direction">←</button>
-                <button id="btn-center" class="btn-direction"></button>
-                <button id="btn-right" class="btn-direction">→</button>
-                <button id="btn-down-left" class="btn-diagonal">↙</button>
-                <button id="btn-down" class="btn-direction">↓</button>
-                <button id="btn-down-right" class="btn-diagonal">↘</button>
+        <div class="game-area">
+            <div id="buff-indicator" class="buff-indicator">Positive Feedback Buff: 0s</div>
+            <canvas id="gameCanvas"></canvas>
+            
+            <!-- Mobile Controls -->
+            <div class="mobile-controls">
+                <div class="d-pad">
+                    <button id="btn-up-left" class="btn-diagonal">↖</button>
+                    <button id="btn-up" class="btn-direction">↑</button>
+                    <button id="btn-up-right" class="btn-diagonal">↗</button>
+                    <button id="btn-left" class="btn-direction">←</button>
+                    <button id="btn-center" class="btn-direction"></button>
+                    <button id="btn-right" class="btn-direction">→</button>
+                    <button id="btn-down-left" class="btn-diagonal">↙</button>
+                    <button id="btn-down" class="btn-direction">↓</button>
+                    <button id="btn-down-right" class="btn-diagonal">↘</button>
+                </div>
             </div>
+            <button id="btn-action" class="action-button">Interact</button>
         </div>
-        <button id="btn-action" class="action-button">Interact</button>
     </div>
     
     <!-- Orientation message for portrait mode -->
@@ -70,18 +73,29 @@
     <script>
         // Force an immediate resize when the page loads
         window.addEventListener('load', function() {
-            // Get the game instance
-            if (typeof game !== 'undefined') {
-                game.resize();
-            }
+            // Wait for game instance to be defined
+            setTimeout(function() {
+                if (typeof game !== 'undefined') {
+                    game.resize();
+                }
+            }, 100);
             
-            // Add orientation change event listener
+            // Handle orientation changes
             window.addEventListener('orientationchange', function() {
                 setTimeout(function() {
                     if (typeof game !== 'undefined') {
                         game.resize();
                     }
-                }, 300); // Small delay to let the orientation change complete
+                }, 300);
+            });
+            
+            // Also handle resize events
+            window.addEventListener('resize', function() {
+                setTimeout(function() {
+                    if (typeof game !== 'undefined') {
+                        game.resize();
+                    }
+                }, 100);
             });
         });
     </script>

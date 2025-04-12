@@ -7,47 +7,45 @@
 body {
     font-family: Arial, sans-serif;
     background-color: #f0f0f0;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
-    width: 100vw;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
     overflow: hidden;
-    margin: 0;
-    padding: 0;
+    touch-action: none;
 }
 
 .game-container {
-    display: flex;
-    flex-direction: column;
+    position: absolute;
+    top: 0;
+    left: 0;
     width: 100%;
     height: 100%;
-    max-width: 100%;
-    max-height: 100vh;
+    display: flex;
+    flex-direction: column;
     background-color: white;
-    border-radius: 8px;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
     overflow: hidden;
-    position: relative;
 }
 
 .header {
     display: flex;
     flex-direction: column;
-    padding: 10px;
+    padding: 5px;
     background-color: #4a69bd;
     color: white;
-    min-height: 85px;
+    min-height: 60px;
+    z-index: 10;
 }
 
 .mood-container {
     display: flex;
     align-items: center;
     width: 100%;
-    gap: 10px;
+    gap: 5px;
     position: relative;
-    margin-bottom: 10px;
-    padding-top: 25px;
+    margin-bottom: 5px;
+    padding-top: 20px;
 }
 
 .mood-labels {
@@ -57,7 +55,7 @@ body {
     position: absolute;
     top: 0;
     left: 0;
-    font-size: 14px;
+    font-size: 12px;
     font-weight: bold;
     padding: 0 5px;
 }
@@ -73,9 +71,6 @@ body {
 }
 
 .score-container {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
     width: 100%;
 }
 
@@ -83,14 +78,14 @@ body {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 10px;
+    gap: 5px;
     flex-wrap: wrap;
-    font-size: clamp(12px, 2vw, 16px);
+    font-size: 11px;
 }
 
 .mood-bar-container {
     width: 100%;
-    height: 20px;
+    height: 15px;
     background-color: #ddd;
     border-radius: 10px;
     overflow: hidden;
@@ -104,41 +99,49 @@ body {
     border-radius: 10px;
 }
 
-/* New triangle indicator */
 #mood-indicator {
     position: absolute;
-    top: -10px;
+    top: -8px;
     left: 57%;
     transform: translateX(-50%);
     width: 0;
     height: 0;
-    border-left: 13px solid transparent;
-    border-right: 13px solid transparent;
-    border-top: 19px solid white;
+    border-left: 10px solid transparent;
+    border-right: 10px solid transparent;
+    border-top: 15px solid white;
     filter: drop-shadow(0px 0px 5px rgba(0, 0, 0, 0.8));
     transition: left 0.3s ease;
     z-index: 10;
     pointer-events: none;
 }
 
+.game-area {
+    position: relative;
+    flex: 1;
+    overflow: hidden;
+}
+
 canvas {
-    flex-grow: 1;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
     background-color: #f0f9ff;
     touch-action: none;
-    width: 100%;
-    display: block;
 }
 
 /* Buff indicator styling */
 .buff-indicator {
     position: absolute;
-    top: 10px;
-    right: 10px;
-    background-color: rgba(142, 68, 173, 0.8); /* Purple, matching SJ's color */
+    top: 5px;
+    right: 5px;
+    background-color: rgba(142, 68, 173, 0.8);
     color: white;
-    padding: 8px 12px;
-    border-radius: 20px;
+    padding: 5px 8px;
+    border-radius: 15px;
     font-weight: bold;
+    font-size: 12px;
     z-index: 10;
     display: none;
     animation: pulse 1.5s infinite;
@@ -153,62 +156,63 @@ canvas {
 /* Mobile touch controls */
 .mobile-controls {
     position: absolute;
-    bottom: 15px;
-    left: 15px;
-    display: none; /* Hidden by default, shown on mobile */
+    bottom: 10px;
+    left: 10px;
     z-index: 100;
     width: auto;
-    transform: none;
-    pointer-events: none; /* Allow clicks to pass through the container but not the buttons */
+    pointer-events: none;
+    display: block;
 }
 
 .d-pad {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     grid-template-rows: repeat(3, 1fr);
-    gap: 5px;
-    pointer-events: all; /* Ensure buttons receive clicks */
+    gap: 3px;
+    pointer-events: all;
 }
 
 .d-pad button {
-    width: 45px;
-    height: 45px;
+    width: 40px;
+    height: 40px;
     background-color: rgba(74, 105, 189, 0.7);
     border: none;
     border-radius: 50%;
     color: white;
-    font-size: 20px;
+    font-size: 18px;
     display: flex;
     justify-content: center;
     align-items: center;
     touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
 }
 
-.d-pad button:active {
+.d-pad button:active, .d-pad button.active {
     background-color: rgba(74, 105, 189, 1);
     transform: scale(0.95);
 }
 
 .action-button {
-    position: fixed;
-    right: 15px;
-    bottom: 30px;
-    width: 70px;
-    height: 70px;
+    position: absolute;
+    right: 10px;
+    bottom: 20px;
+    width: 60px;
+    height: 60px;
     background-color: rgba(29, 209, 161, 0.7);
     border: none;
     border-radius: 50%;
     color: white;
-    font-size: 16px;
+    font-size: 14px;
     display: flex;
     justify-content: center;
     align-items: center;
     touch-action: manipulation;
-    pointer-events: all; /* Ensure button receives clicks */
-    z-index: 100; /* Make sure it's above the canvas */
+    pointer-events: all;
+    z-index: 100;
+    -webkit-tap-highlight-color: transparent;
 }
 
-.action-button:active {
+.action-button:active, .action-button.active {
     background-color: rgba(29, 209, 161, 1);
     transform: scale(0.95);
 }
@@ -231,21 +235,21 @@ canvas {
 
 .orientation-content {
     color: white;
-    font-size: 24px;
+    font-size: 20px;
     padding: 20px;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 20px;
+    gap: 15px;
 }
 
 .phone-icon {
-    font-size: 50px;
+    font-size: 40px;
     animation: tilt 1.5s infinite alternate;
 }
 
 .rotate-icon {
-    font-size: 40px;
+    font-size: 30px;
     animation: rotate 2s infinite linear;
 }
 
@@ -270,64 +274,42 @@ canvas {
     }
 }
 
-/* Media query for mobile devices */
-@media screen and (max-width: 1024px) {
-    .mobile-controls {
-        display: block;
-    }
-    
-    .game-container {
-        border-radius: 0;
-        max-height: 100vh;
-    }
-    
-    .stats {
-        font-size: 12px;
-    }
-    
-    .mood-container {
-        margin-bottom: 5px;
-    }
-    
+/* Very small height adjustments */
+@media screen and (max-height: 400px) {
     .header {
-        padding: 5px 10px;
-        min-height: 70px;
-    }
-}
-
-@media screen and (max-height: 500px) {
-    .header {
-        padding: 2px 10px;
-        min-height: 60px;
+        padding: 2px;
+        min-height: 45px;
     }
     
     .mood-container {
         margin-bottom: 2px;
-        padding-top: 20px;
+        padding-top: 15px;
     }
     
     .mood-bar-container {
-        height: 15px;
+        height: 12px;
     }
     
     .stats {
-        font-size: 10px;
+        font-size: 9px;
     }
     
     .d-pad button {
-        width: 35px;
-        height: 35px;
+        width: 30px;
+        height: 30px;
+        font-size: 14px;
     }
     
     .action-button {
-        width: 50px;
-        height: 50px;
+        width: 45px;
+        height: 45px;
+        font-size: 12px;
     }
 }
 
 @keyframes flash-buff {
     0% { transform: scale(1); background-color: rgba(142, 68, 173, 0.8); }
-    25% { transform: scale(1.5); background-color: rgba(142, 68, 173, 1); box-shadow: 0 0 20px rgba(142, 68, 173, 1); }
+    25% { transform: scale(1.2); background-color: rgba(142, 68, 173, 1); box-shadow: 0 0 15px rgba(142, 68, 173, 1); }
     100% { transform: scale(1); background-color: rgba(142, 68, 173, 0.8); }
 }
 
