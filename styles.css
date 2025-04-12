@@ -13,6 +13,8 @@ body {
     height: 100vh;
     width: 100vw;
     overflow: hidden;
+    margin: 0;
+    padding: 0;
 }
 
 .game-container {
@@ -20,8 +22,8 @@ body {
     flex-direction: column;
     width: 100%;
     height: 100%;
-    max-width: 1000px;
-    max-height: 800px;
+    max-width: 100%;
+    max-height: 100vh;
     background-color: white;
     border-radius: 8px;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
@@ -151,29 +153,31 @@ canvas {
 /* Mobile touch controls */
 .mobile-controls {
     position: absolute;
-    bottom: 10px;
-    left: 20px;
+    bottom: 15px;
+    left: 15px;
     display: none; /* Hidden by default, shown on mobile */
     z-index: 100;
     width: auto;
     transform: none;
+    pointer-events: none; /* Allow clicks to pass through the container but not the buttons */
 }
 
 .d-pad {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     grid-template-rows: repeat(3, 1fr);
-    gap: 3px;
+    gap: 5px;
+    pointer-events: all; /* Ensure buttons receive clicks */
 }
 
 .d-pad button {
-    width: 40px;
-    height: 40px;
+    width: 45px;
+    height: 45px;
     background-color: rgba(74, 105, 189, 0.7);
     border: none;
     border-radius: 50%;
     color: white;
-    font-size: 18px;
+    font-size: 20px;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -187,10 +191,10 @@ canvas {
 
 .action-button {
     position: fixed;
-    right: 20px;
+    right: 15px;
     bottom: 30px;
-    width: 60px;
-    height: 60px;
+    width: 70px;
+    height: 70px;
     background-color: rgba(29, 209, 161, 0.7);
     border: none;
     border-radius: 50%;
@@ -200,6 +204,8 @@ canvas {
     justify-content: center;
     align-items: center;
     touch-action: manipulation;
+    pointer-events: all; /* Ensure button receives clicks */
+    z-index: 100; /* Make sure it's above the canvas */
 }
 
 .action-button:active {
@@ -207,24 +213,60 @@ canvas {
     transform: scale(0.95);
 }
 
+/* Orientation message */
+.orientation-message {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.9);
+    z-index: 9999;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    text-align: center;
+}
+
+.orientation-content {
+    color: white;
+    font-size: 24px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+}
+
+.phone-icon {
+    font-size: 50px;
+    animation: tilt 1.5s infinite alternate;
+}
+
+.rotate-icon {
+    font-size: 40px;
+    animation: rotate 2s infinite linear;
+}
+
+@keyframes tilt {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(90deg); }
+}
+
+@keyframes rotate {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
 /* Landscape orientation check */
 @media screen and (orientation: portrait) {
-    body:after {
-        content: "Please rotate your device to landscape mode";
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background-color: rgba(0, 0, 0, 0.9);
-        color: white;
+    .orientation-message {
         display: flex;
-        justify-content: center;
-        align-items: center;
-        z-index: 9999;
-        font-size: 24px;
-        text-align: center;
-        padding: 20px;
+    }
+    
+    .game-container {
+        display: none;
     }
 }
 

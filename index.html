@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#4a69bd">
+    <meta name="orientation" content="landscape">
     <title>Feedback King</title>
     <link rel="stylesheet" href="styles.css">
 </head>
@@ -52,8 +54,36 @@
         </div>
         <button id="btn-action" class="action-button">Interact</button>
     </div>
+    
+    <!-- Orientation message for portrait mode -->
+    <div id="orientation-message" class="orientation-message">
+        <div class="orientation-content">
+            <div class="phone-icon">📱</div>
+            <p>Please rotate your device to landscape mode</p>
+            <div class="rotate-icon">↻</div>
+        </div>
+    </div>
+    
     <!-- Supabase JS Client -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="game.js"></script>
+    <script>
+        // Force an immediate resize when the page loads
+        window.addEventListener('load', function() {
+            // Get the game instance
+            if (typeof game !== 'undefined') {
+                game.resize();
+            }
+            
+            // Add orientation change event listener
+            window.addEventListener('orientationchange', function() {
+                setTimeout(function() {
+                    if (typeof game !== 'undefined') {
+                        game.resize();
+                    }
+                }, 300); // Small delay to let the orientation change complete
+            });
+        });
+    </script>
 </body>
 </html>

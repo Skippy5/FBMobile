@@ -17,6 +17,20 @@ class Game {
         this.tokensElement = document.getElementById('tokens');
         this.csatValueElement = document.getElementById('csat-value');
         
+        // Global message system
+        this.globalMessage = {
+            text: "",
+            visible: false,
+            timer: 0,
+            color: '#e74c3c' // Red color by default
+        };
+        
+        // Ensure the canvas initially takes up the maximum available space
+        this.canvasWidth = window.innerWidth;
+        this.canvasHeight = window.innerHeight - document.querySelector('.header').offsetHeight;
+        this.previousWidth = this.canvasWidth;
+        this.previousHeight = this.canvasHeight;
+        
         this.isRunning = false;
         this.level = 1;
         this.score = 0;
@@ -33,14 +47,6 @@ class Game {
         this.csatScore = 0; // Average CSAT score of collected feedback
         this.moodAdjustment = 0; // Track mood adjustment between levels
         this.moodMessage = ""; // Message to display with mood adjustment
-        
-        // Global message system
-        this.globalMessage = {
-            text: "",
-            visible: false,
-            timer: 0,
-            color: '#e74c3c' // Red color by default
-        };
         
         this.rj = {
             x: 400,
@@ -179,9 +185,13 @@ class Game {
         this.peopleCount = 10; // Number of people per level
         this.peopleLeft = this.peopleCount;
         
-        this.bindEvents();
+        // Call resize to set up the proper dimensions
         this.resize();
-        this.renderSplashScreen(); // Render the splash screen immediately
+        
+        // Bind events after initialization
+        this.bindEvents();
+        // Render splash screen
+        this.renderSplashScreen();
         
         // Positive feedback buff status
         this.positiveFeedbackBuff = false;
@@ -429,53 +439,26 @@ class Game {
     }
     
     resize() {
-        // Check if we're in landscape mode
-        const isLandscape = window.innerWidth > window.innerHeight;
-        
-        // Set canvas size based on parent container
+        // Get container dimensions
         const container = this.canvas.parentElement;
         const headerHeight = document.querySelector('.header').offsetHeight;
-        const containerWidth = container.clientWidth;
-        const containerHeight = container.clientHeight - headerHeight;
+        const containerWidth = window.innerWidth;
+        const containerHeight = window.innerHeight - headerHeight;
         
         // Get device pixel ratio for better rendering on high-DPI screens
         const dpr = window.devicePixelRatio || 1;
         
-        // Calculate available height for controls on mobile
+        // Calculate available height accounting for mobile controls
         const isMobile = window.innerWidth <= 1024;
-        const controlsHeight = isMobile ? 60 : 0; // Approximate height for controls
+        const controlsHeight = isMobile ? 80 : 0; // Approximate height for controls
         
-        // Maintain aspect ratio for the canvas
-        let canvasWidth, canvasHeight;
+        // Set canvas size to fill the available space
+        const canvasWidth = containerWidth;
+        const canvasHeight = containerHeight - controlsHeight;
         
-        if (isLandscape) {
-            // In landscape mode, prioritize fitting the entire game area
-            canvasHeight = containerHeight - controlsHeight;
-            
-            // For very small heights, adjust aspect ratio to fit better
-            const aspectRatio = window.innerHeight < 500 ? 2 : 4/3;
-            canvasWidth = Math.min(containerWidth, canvasHeight * aspectRatio);
-            
-            // If width is constrained, adjust height accordingly
-            if (canvasWidth < containerWidth) {
-                canvasHeight = canvasWidth / aspectRatio;
-            }
-        } else {
-            // Force landscape mode warning is handled by CSS
-            canvasWidth = containerWidth;
-            canvasHeight = containerHeight - controlsHeight;
-        }
-        
-        // Set physical canvas size (actual pixels rendered)
+        // Set canvas dimensions
         this.canvas.width = canvasWidth;
         this.canvas.height = canvasHeight;
-        
-        // Center the canvas horizontally if needed
-        if (canvasWidth < containerWidth) {
-            this.canvas.style.marginLeft = `${(containerWidth - canvasWidth) / 2}px`;
-        } else {
-            this.canvas.style.marginLeft = '0';
-        }
         
         // Store canvas dimensions for game calculations
         this.canvasWidth = canvasWidth;
