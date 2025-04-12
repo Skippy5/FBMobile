@@ -438,24 +438,35 @@ class Game {
         const containerWidth = container.clientWidth;
         const containerHeight = container.clientHeight - headerHeight;
         
-        // Maintain aspect ratio for the canvas (4:3)
+        // Get device pixel ratio for better rendering on high-DPI screens
+        const dpr = window.devicePixelRatio || 1;
+        
+        // Calculate available height for controls on mobile
+        const isMobile = window.innerWidth <= 1024;
+        const controlsHeight = isMobile ? 60 : 0; // Approximate height for controls
+        
+        // Maintain aspect ratio for the canvas
         let canvasWidth, canvasHeight;
         
         if (isLandscape) {
-            // In landscape mode, prioritize height
-            canvasHeight = containerHeight;
-            canvasWidth = Math.min(containerWidth, canvasHeight * (4/3));
+            // In landscape mode, prioritize fitting the entire game area
+            canvasHeight = containerHeight - controlsHeight;
             
-            // Adjust if width is constrained
+            // For very small heights, adjust aspect ratio to fit better
+            const aspectRatio = window.innerHeight < 500 ? 2 : 4/3;
+            canvasWidth = Math.min(containerWidth, canvasHeight * aspectRatio);
+            
+            // If width is constrained, adjust height accordingly
             if (canvasWidth < containerWidth) {
-                canvasHeight = canvasWidth * (3/4);
+                canvasHeight = canvasWidth / aspectRatio;
             }
         } else {
             // Force landscape mode warning is handled by CSS
             canvasWidth = containerWidth;
-            canvasHeight = canvasWidth * (3/4);
+            canvasHeight = containerHeight - controlsHeight;
         }
         
+        // Set physical canvas size (actual pixels rendered)
         this.canvas.width = canvasWidth;
         this.canvas.height = canvasHeight;
         
@@ -466,11 +477,18 @@ class Game {
             this.canvas.style.marginLeft = '0';
         }
         
+        // Store canvas dimensions for game calculations
+        this.canvasWidth = canvasWidth;
+        this.canvasHeight = canvasHeight;
+        
         // Adjust positions of game elements based on new canvas size
         if (this.isRunning) {
-            // Repositioning game elements when canvas resizes during gameplay
-            const scaleX = canvasWidth / 1000; // Original width reference
-            const scaleY = canvasHeight / 800; // Original height reference
+            // Keep previous canvas dimensions to scale properly
+            const oldWidth = this.previousWidth || 1000;
+            const oldHeight = this.previousHeight || 800;
+            
+            const scaleX = canvasWidth / oldWidth;
+            const scaleY = canvasHeight / oldHeight;
             
             // Reposition RJ
             this.rj.x = Math.min(Math.max(this.rj.x * scaleX, this.rj.width), canvasWidth - this.rj.width);
@@ -484,22 +502,13 @@ class Game {
             this.skip.x = canvasWidth / 2;
             this.skip.y = canvasHeight - 50;
             
-            // Reposition people, envelopes, rewards, etc.
-            this.people.forEach(person => {
-                person.x = Math.min(Math.max(person.x * scaleX, person.width/2), canvasWidth - person.width/2);
-                person.y = Math.min(Math.max(person.y * scaleY, person.height/2), canvasHeight - person.height/2);
-            });
-            
-            this.envelopes.forEach(envelope => {
-                envelope.x = Math.min(Math.max(envelope.x * scaleX, envelope.width/2), canvasWidth - envelope.width/2);
-                envelope.y = Math.min(Math.max(envelope.y * scaleY, envelope.height/2), canvasHeight - envelope.height/2);
-            });
-            
-            this.rewards.forEach(reward => {
-                reward.x = Math.min(Math.max(reward.x * scaleX, reward.width/2), canvasWidth - reward.width/2);
-                reward.y = Math.min(Math.max(reward.y * scaleY, reward.height/2), canvasHeight - reward.height/2);
-            });
+            // Reposition all other game elements
+            this.repositionGameElements(scaleX, scaleY);
         }
+        
+        // Store current dimensions for next resize
+        this.previousWidth = canvasWidth;
+        this.previousHeight = canvasHeight;
         
         // Re-render the current scene
         if (this.showSplashScreen) {
@@ -508,6 +517,57 @@ class Game {
             this.renderGameOverScreen();
         } else if (this.isRunning) {
             this.render();
+        }
+    }
+    
+    repositionGameElements(scaleX, scaleY) {
+        // Helper function to keep objects within canvas bounds
+        const keepInBounds = (obj) => {
+            const radius = Math.max(obj.width, obj.height) / 2;
+            obj.x = Math.min(Math.max(obj.x, radius), this.canvasWidth - radius);
+            obj.y = Math.min(Math.max(obj.y, radius), this.canvasHeight - radius);
+        };
+        
+        // Reposition people
+        this.people.forEach(person => {
+            person.x *= scaleX;
+            person.y *= scaleY;
+            keepInBounds(person);
+        });
+        
+        // Reposition envelopes
+        this.envelopes.forEach(envelope => {
+            envelope.x *= scaleX;
+            envelope.y *= scaleY;
+            keepInBounds(envelope);
+        });
+        
+        // Reposition rewards
+        this.rewards.forEach(reward => {
+            reward.x *= scaleX;
+            reward.y *= scaleY;
+            keepInBounds(reward);
+        });
+        
+        // Reposition NPCs
+        this.npcs.forEach(npc => {
+            npc.x *= scaleX;
+            npc.y *= scaleY;
+            keepInBounds(npc);
+        });
+        
+        // Reposition powerups
+        this.powerups.forEach(powerup => {
+            powerup.x *= scaleX;
+            powerup.y *= scaleY;
+            keepInBounds(powerup);
+        });
+        
+        // Reposition bear if active
+        if (this.bear.active) {
+            this.bear.x *= scaleX;
+            this.bear.y *= scaleY;
+            keepInBounds(this.bear);
         }
     }
     
@@ -524,6 +584,9 @@ class Game {
         
         // Reset game state
         this.reset();
+        
+        // Ensure canvas and game elements are properly sized for the device
+        this.resize();
         
         // Set running flag
         this.isRunning = true;
@@ -545,6 +608,10 @@ class Game {
     }
     
     reset() {
+        // Get canvas dimensions
+        const canvasWidth = this.canvas.width;
+        const canvasHeight = this.canvas.height;
+        
         this.level = 1;
         this.score = 0;
         this.tokens = 0;
@@ -563,8 +630,8 @@ class Game {
         };
         
         this.rj = {
-            x: this.canvas.width / 2,
-            y: this.canvas.height / 2,
+            x: canvasWidth / 2,
+            y: canvasHeight / 2,
             width: 30,
             height: 30,
             speed: 200,
@@ -583,8 +650,8 @@ class Game {
         };
         
         this.chappy = {
-            x: this.canvas.width / 2,
-            y: this.canvas.height / 3,
+            x: canvasWidth / 2,
+            y: canvasHeight / 3,
             width: 30,
             height: 30,
             speed: 100,
@@ -611,8 +678,8 @@ class Game {
             bearCollision: false
         };
         
-        this.skip.x = this.canvas.width / 2;
-        this.skip.y = this.canvas.height - 50; // Move Skip up a bit from the bottom
+        this.skip.x = canvasWidth / 2;
+        this.skip.y = canvasHeight - 50; // Move Skip up a bit from the bottom
         
         this.dean.x = -50; // Reset Dean's position
         this.dean.active = false; // Reset Dean's activity
